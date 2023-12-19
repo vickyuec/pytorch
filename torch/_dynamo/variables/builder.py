@@ -153,6 +153,7 @@ from .tensor import (
 from .torch import TorchCtxManagerClassVariable, TorchInGraphFunctionVariable
 from .torch_function import build_torch_function_fn, TensorWithTFOverrideVariable
 from .user_defined import (
+    DebuggingVariable,
     KeyedJaggedTensorVariable,
     UserDefinedClassVariable,
     UserDefinedObjectVariable,
@@ -472,6 +473,11 @@ class VariableBuilder:
         elif isinstance(value, enum.Enum):
             self.install_guards(GuardBuilder.ID_MATCH)
             return EnumVariable(value=value, source=self.source)
+        elif DebuggingVariable.is_matching_object(value):
+            # Put this above builtin_callable so that print() can be handled
+            # along with other debugging functions
+            self.install_guards(GuardBuilder.BUILTIN_MATCH)
+            return DebuggingVariable(value, source=self.source)
         elif is_utils_checkpoint(value):
             return build_checkpoint_variable(source=self.source)
         elif isinstance(value, functools.partial):

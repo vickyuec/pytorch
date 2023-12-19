@@ -332,6 +332,11 @@ optimize_user_defined_triton_kernels = True
 # If to log Dynamo compilation metrics into log files (for OSS) and Scuba tables (for fbcode).
 log_compilation_metrics = True
 
+# Reorders the print/warning statements to construct larger graphs, as dynamo
+# will by default graph break on these. Note that there is a possiblity of the
+# reordered prints printing incorrect things.
+reorder_prints = False
+
 # simulates what would happen if we didn't have support for BUILD_SET opcode,
 # used for testing
 inject_BUILD_SET_unimplemented_TESTING_ONLY = False
