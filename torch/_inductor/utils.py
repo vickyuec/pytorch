@@ -641,8 +641,8 @@ except ImportError:
     # class
     instance_descriptor = collections.namedtuple(  # type: ignore[no-redef]
         "instance_descriptor",
-        ["divisible_by_16", "equal_to_1", "ids_of_folded_args", "divisible_by_8"],
-        defaults=[tuple(), tuple(), tuple(), tuple()],
+        ["divisible_by_16", "equal_to_1", "divisible_by_8"],
+        defaults=[tuple(), tuple(), tuple()],
     )
 
 
