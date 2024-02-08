@@ -1696,6 +1696,10 @@ def main():
         ),
     ]
 
+    if TEST_WITH_ROCM and options.enable_td:
+        # Using rocm as testing for test elimiation
+        test_batches = test_batches[:2]
+
     for test_batch in test_batches:
         print_to_stderr(test_batch)
 
