@@ -1150,6 +1150,7 @@ def parse_args():
         action="store_true",
         help="Enables removing tests based on TD",
         default=IS_CI
+        and TEST_WITH_ROCM
         and os.getenv("BRANCH", "") != "main"
         and not strtobool(os.environ.get("NO_TD", "False")),
     )
@@ -1696,7 +1697,7 @@ def main():
         ),
     ]
 
-    if TEST_WITH_ROCM and options.enable_td:
+    if options.enable_td:
         # Using rocm as testing for test elimiation
         test_batches = test_batches[:2]
 
