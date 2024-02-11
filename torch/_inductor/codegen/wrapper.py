@@ -2443,7 +2443,7 @@ class CppWrapperCodeGen(WrapperCodeGen):
     def generate_index_put_fallback(self, kernel, x, indices, values, accumulate):
         if V.graph.aot_mode and V.graph.cpp_wrapper and config.abi_compatible:
             # See the comment in codegen_reinterpret_view about why having something like
-            # RAIIAtenTensorHandle(tmp_tensor_handle_2) in a tmp array can cause the correponding
+            # RAIIAtenTensorHandle(tmp_tensor_handle_2) in a tmp array can cause the corresponding
             # tensor prematurely deallocated, thus this std:vector().data() trick here.
             indices_str = (
                 f"std::vector<AtenTensorHandle>{{{', '.join(indices)}}}.data()"
