@@ -80,9 +80,16 @@ jobs:
 
       - name: Install packages
         run: |
+          set -eux
+
           sudo apt-get update
           sudo apt-get install -y git curl unzip build-essential dnsutils
-          git --version
+
+          # Ensure pip is installed
+          python3 -m ensurepip --upgrade
+          python3 -m pip install --upgrade pip
+
+          python3 -m pip --version
         shell: bash
 
       # [pytorch repo ref] 
