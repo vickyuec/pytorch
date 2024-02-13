@@ -254,6 +254,8 @@ else
     # TODO: I'm not sure why, but somehow we lose verbose commands
     set -x
 
+    git status --porcelain
+
     assert_git_not_dirty
     # Copy ninja build logs to dist folder
     mkdir -p dist
