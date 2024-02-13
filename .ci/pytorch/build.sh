@@ -228,8 +228,8 @@ if [[ "$BUILD_ENVIRONMENT" == *-bazel-* ]]; then
     tools/bazel build --config=no-tty "${BAZEL_MEM_LIMIT}" "${BAZEL_CPU_LIMIT}" //...
   fi
 else
-  echo "### To resolve <fatal: detected dubious ownership in repository at '/var/lib/jenkins/workspace'>"
-  git config --global --add safe.directory /var/lib/jenkins/workspace
+#  echo "### To resolve <fatal: detected dubious ownership in repository at '/var/lib/jenkins/workspace'>"
+#  git config --global --add safe.directory /var/lib/jenkins/workspace
 
   # check that setup.py would fail with bad arguments
   echo "The next three invocations are expected to fail with invalid command error messages."
