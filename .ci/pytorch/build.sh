@@ -257,6 +257,10 @@ else
 
     git status --porcelain
 
+    ls -la aws/
+
+    if [ -d "aws/" ]; then rm -rf aws/; fi
+
     assert_git_not_dirty
     # Copy ninja build logs to dist folder
     mkdir -p dist
