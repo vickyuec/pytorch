@@ -229,7 +229,7 @@ if [[ "$BUILD_ENVIRONMENT" == *-bazel-* ]]; then
   fi
 else
 #  echo "### To resolve <fatal: detected dubious ownership in repository at '/var/lib/jenkins/workspace'>"
-#  git config --global --add safe.directory /var/lib/jenkins/workspace
+  git config --global --add safe.directory /var/lib/jenkins/workspace
 
   # check that setup.py would fail with bad arguments
   echo "The next three invocations are expected to fail with invalid command error messages."
@@ -238,9 +238,6 @@ else
   ( ! get_exit_code python setup.py clean bad_argument )
 
   if [[ "$BUILD_ENVIRONMENT" != *libtorch* ]]; then
-    # python setup.py clean
-    git config --global --add safe.directory /var/lib/jenkins/workspace
-
     echo "### UID"
     echo $UID
 
@@ -250,7 +247,7 @@ else
     # or building non-XLA tests.
     if [[ "$BUILD_ENVIRONMENT" != *rocm*  &&
           "$BUILD_ENVIRONMENT" != *xla* ]]; then
-      WERROR=1 python setup.py bdist_wheel
+      WERROR=1 sudo python setup.py bdist_wheel
     else
       python setup.py bdist_wheel
     fi
