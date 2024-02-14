@@ -62,6 +62,10 @@ TestCase = test_torchinductor.TestCase
 aten = torch.ops.aten
 check_model = test_torchinductor.check_model
 
+# Many tests inspect the generated_cpp_vec_kernel_count and FX graph caching
+# will affect that metric if there are any cache hits.
+config.fx_graph_cache = False
+
 
 @contextlib.contextmanager
 def set_num_threads(num_threads):
