@@ -239,6 +239,10 @@ else
 
   if [[ "$BUILD_ENVIRONMENT" != *libtorch* ]]; then
     # python setup.py clean
+    git config --global --add safe.directory /var/lib/jenkins/workspace
+
+    echo "### UID"
+    echo $UID
 
     # rocm builds fail when WERROR=1
     # XLA test build fails when WERROR=1
