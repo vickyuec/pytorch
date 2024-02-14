@@ -412,7 +412,6 @@ dynamo_expected_failures = {
     "TestAttnBiasCPU.test_is_causal_equals_upper_left_shape3_cpu",  # Can't construct an AttrSource without a valid base source
     "TestAttnBiasCPU.test_is_causal_equals_upper_left_shape1_cpu",  # Can't construct an AttrSource without a valid base source
     "TestAttnBiasCPU.test_is_causal_equals_upper_left_shape0_cpu",  # Can't construct an AttrSource without a valid base source
-    "TestAssertCloseSparseCOO.test_matching_coalesced",  # test_testing
     "TestImports.test_circular_dependencies",  # test_testing
     "TestAssertCloseSparseCSR.test_mismatching_crow_indices_msg",  # test_testing
     "TestAssertCloseSparseBSC.test_mismatching_row_indices_msg",  # test_testing
