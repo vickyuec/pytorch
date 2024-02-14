@@ -257,7 +257,11 @@ else
 
     git status --porcelain
 
+    echo "### Check aws folder"
     ls -la aws/
+
+    echo "### Check parent folder"
+    ls -la ../
 
     if [ -d "aws/" ]; then rm -rf aws/; fi
 
