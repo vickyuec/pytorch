@@ -436,5 +436,28 @@ class TestAggregatedHeuristics(HeuristicsTestMixin):
         aggregator.get_test_stats(TestRun("test2"))
 
 
+class TestJSONParsing(unittest.TestCase):
+    def test_json_parsing_matches_TestPrioritizations(self) -> None:
+        tests = ["test1", "test2", "test3", "test4", "test5"]
+        tp = TestPrioritizations(
+            tests_being_ranked=tests,
+            high_relevance=["test3", "test4"],
+            probable_relevance=["test5"],
+            unlikely_relevance=["test1"],
+        )
+        tp_json = tp.to_json()
+        tp_json_to_tp = TestPrioritizations.from_json(tp_json)
+
+        self.assertSetEqual(tp._original_tests, tp_json_to_tp._original_tests)
+        self.assertListEqual(tp._test_priorities, tp_json_to_tp._test_priorities)
+
+    def test_json_parsing_matches_TestRun(self) -> None:
+        testrun = TestRun("test1", included=["classA", "classB"])
+        testrun_json = testrun.to_json()
+        testrun_json_to_test = TestRun.from_json(testrun_json)
+
+        self.assertTrue(testrun == testrun_json_to_test)
+
+
 if __name__ == "__main__":
     unittest.main()
