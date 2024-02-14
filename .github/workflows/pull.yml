@@ -406,7 +406,7 @@ jobs:
       docker-image-name: pytorch-linux-jammy-py3-clang12-executorch
       test-matrix: |
         { include: [
-          { config: "executorch", shard: 1, num_shards: 1, runner: "linux.2xlarge" },
+          { config: "executorch", shard: 1, num_shards: 1, runner: "arc-lf-linux.2xlarge.arc.canary" },
         ]}
 
   linux-jammy-py3-clang12-executorch-test:

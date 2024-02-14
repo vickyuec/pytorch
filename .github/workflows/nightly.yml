@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - .github/workflows/nightly.yml
-      - .github/workflows/_linux-build.yml
+#      - .github/workflows/_linux-build.yml
 
 
 concurrency:
