@@ -439,7 +439,6 @@ def mirror_files_into_torchgen():
     for new_path, orig_path in paths:
         # Create the dirs involved in new_path if they don't exist
         if not os.path.exists(new_path):
-            print(f"### new_path: {new_path}, orig_path: {orig_path}")
             os.makedirs(os.path.dirname(new_path), exist_ok=True)
 
         # Copy the files from the orig location to the new location
