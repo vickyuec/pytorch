@@ -6,6 +6,7 @@ from torch._C import DispatchKey
 from torch._higher_order_ops.utils import (
     _has_potential_branch_input_alias,
     _has_potential_branch_input_mutation,
+    _is_compiling_hoo,
     _maybe_run_with_interpreter,
     _set_compilation_env,
     autograd_not_implemented,
@@ -97,7 +98,7 @@ def while_loop(cond_fn, body_fn, operands):
         - 'while_loop' only supports **inference** right now. Autograd will be supported in the future.
 
     """
-    if torch._dynamo.is_compiling():
+    if _is_compiling_hoo():
         return while_loop_op(cond_fn, body_fn, operands)
 
     def _validate_input(cond_fn, body_fn, operands):

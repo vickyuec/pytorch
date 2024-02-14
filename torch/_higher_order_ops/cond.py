@@ -15,6 +15,7 @@ from torch._functorch.utils import exposed_in
 from torch._higher_order_ops.utils import (
     _has_potential_branch_input_alias,
     _has_potential_branch_input_mutation,
+    _is_compiling_hoo,
     _maybe_run_with_interpreter,
     _set_compilation_env,
     autograd_not_implemented,
@@ -104,7 +105,7 @@ def cond(pred, true_fn, false_fn, operands):
 
     """
 
-    if torch._dynamo.is_compiling():
+    if _is_compiling_hoo():
         return cond_op(pred, true_fn, false_fn, operands)
 
     def _validate_input(pred, true_fn, false_fn, operands):

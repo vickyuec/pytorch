@@ -76,15 +76,29 @@ def _maybe_run_with_interpreter(fn):
     return maybe_interpreted_fn
 
 
+_is_compiling_hoo_flag: bool = False
+
+
+def _is_compiling_hoo() -> bool:
+    return _is_compiling_hoo_flag
+
+
 @contextmanager
 def _set_compilation_env():
+    global _is_compiling_hoo_flag
+
     _old_is_tracing = torch.fx._symbolic_trace._is_fx_tracing_flag
+    _old_is_compiling_hoo_flag = _is_compiling_hoo_flag
     try:
         # We need to turn off the is_fx_tracing_flag. Remove this flag check from dyanmo
         # once we are confident fx tracing works with dynamo.
         torch.fx._symbolic_trace._is_fx_tracing_flag = False
+
+        # There are special conditions for higher-order ops and compiling state.
+        _is_compiling_hoo_flag = True
         yield
     finally:
+        _is_compiling_hoo_flag = _old_is_compiling_hoo_flag
         torch.fx._symbolic_trace._is_fx_tracing_flag = _old_is_tracing
 
 

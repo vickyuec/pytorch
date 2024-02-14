@@ -11,8 +11,12 @@ except ModuleNotFoundError:
     np = None  # type: ignore[assignment]
 
 
+# TODO(khabinov): we should replace usages of this function with torch.compiler.is_compiling().
 def is_compiling() -> bool:
-    return False
+    """
+    Indicates whether we are tracing/compiling with torch.compile() or torch.export().
+    """
+    return torch.compiler.is_compiling()
 
 
 def wrap_inline(fn):
