@@ -1,6 +1,7 @@
 import warnings
 from collections import namedtuple
 from typing import Any, Optional, Tuple, List, Callable, Dict
+from functools import partial
 
 import torch
 from torch.sparse._semi_structured_conversions import (
@@ -17,6 +18,7 @@ from torch.sparse._semi_structured_ops import (
     semi_sparse_mm,
     semi_sparse_addmm,
     semi_sparse_linear,
+    semi_sparse_pointwise_op
 )
 
 __all__ = [
@@ -56,6 +58,7 @@ class SparseSemiStructuredTensor(torch.Tensor):
     _FUSE_TRANSPOSE: bool = False
     _PROTOTYPE_WARNING_SHOWN: bool = False
 
+    BACKEND: str
     SPARSE_DISPATCH: Dict[Callable, Callable]
 
     packed: Optional[torch.Tensor]
@@ -123,6 +126,9 @@ class SparseSemiStructuredTensor(torch.Tensor):
             # We can't define the dispatch table explicitly because of torch.ops import errors, so we do this instead
             # But this is useful since it allows users to overload the dispatch table for debugging / testing.
             cls._load_dispatch_table()
+
+            # we can also register the classes with dynamo when the warning is shown.
+            torch._dynamo.allow_in_graph(cls)
 
         if packed is not None:
             previous_tensor = packed
@@ -216,6 +222,7 @@ class SparseSemiStructuredTensor(torch.Tensor):
                 torch.ops.aten.matmul: semi_sparse_mm,
                 torch.ops.aten.addmm: semi_sparse_addmm,
                 torch.ops.aten.linear: semi_sparse_linear,
+                torch.ops.aten._to_copy: fallback_dispatcher,
             }
             if custom_dispatch_table is not None:
                 cls.SPARSE_DISPATCH.update(custom_dispatch_table)
@@ -303,10 +310,27 @@ class SparseSemiStructuredTensor(torch.Tensor):
     ) -> torch.Tensor:
         raise NotImplementedError
 
+    @classmethod
+    def from_dense_fast(cls, original_tensor : torch.Tensor, algo: str="", gradient: str="24dense") -> "SparseSemiStructuredTensor":
+        from torch.sparse.sparsifier import _Sparsify24Func
+        return _Sparsify24Func.apply(original_tensor, algo, gradient, cls.BACKEND)
+
+    def from_dense_like(
+        self,
+        original_tensor: torch.Tensor,
+        out_dense: bool = False,
+    ):
+        from torch.sparse.sparsifier import _Sparsify24LikeFunc
+        # Handle transposed case
+        if not self.threads_masks.is_contiguous():
+            return _Sparsify24LikeFunc.apply(original_tensor.t(), self.t(), out_dense).t()
+        return _Sparsify24LikeFunc.apply(original_tensor, self, out_dense)
 
 def to_sparse_semi_structured(
     original_tensor: torch.Tensor,
     transposed: bool = False,
+    training=False,
+    backend: str = None,
 ) -> SparseSemiStructuredTensor:
     """
     This function converts a dense tensor into a sparse semi-structured tensor.
@@ -359,12 +383,22 @@ def to_sparse_semi_structured(
             "SparseSemiStructuredTensor only support contiguous input tensors. "
         )
 
-    sparse_subclass = (
-        torch.sparse.SparseSemiStructuredTensorCUTLASS
-        if SparseSemiStructuredTensor._FORCE_CUTLASS
-        else torch.sparse.SparseSemiStructuredTensorCUSPARSELT
-    )
-    return sparse_subclass.from_dense(original_tensor)
+    if backend == "cutlass":
+        SPARSE_SUBCLASS = torch.sparse.SparseSemiStructuredTensorCUTLASS
+    elif backend == "cusparselt":
+        SPARSE_SUBCLASS = torch.sparse.SparseSemiStructuredTensorCUSPARSELT
+    else:
+        # set from _FORCE_CUTLASS flag
+        SPARSE_SUBCLASS = (
+            torch.sparse.SparseSemiStructuredTensorCUTLASS
+            if SparseSemiStructuredTensor._FORCE_CUTLASS
+            else torch.sparse.SparseSemiStructuredTensorCUSPARSELT
+        )
+
+    if training:
+        return SPARSE_SUBCLASS.from_dense_fast(original_tensor)
+    else:
+        return SPARSE_SUBCLASS.from_dense(original_tensor)
 
 
 class SparseSemiStructuredTensorCUTLASS(SparseSemiStructuredTensor):
@@ -377,7 +411,7 @@ class SparseSemiStructuredTensorCUTLASS(SparseSemiStructuredTensor):
     When _FORCE_CUTLASS is set, or when cuSPARSELt is not available, this subclass calls into _sparse_semi_structured_linear
     and sparse_semi_structured_from_dense for conversion to the compressed format.
     """
-
+    BACKEND = "cutlass"
     _DTYPE_SHAPE_CONSTRAINTS = {
         torch.int8: _SEMI_STRUCTURED_SPARSE_CONFIG(16, 128, 16, 16),
         torch.float16: _SEMI_STRUCTURED_SPARSE_CONFIG(32, 64, 8, 8),
@@ -403,6 +437,35 @@ class SparseSemiStructuredTensorCUTLASS(SparseSemiStructuredTensor):
             threads_masks=None,
             requires_grad=original_tensor.requires_grad,
         )
+
+    @classmethod
+    def _load_dispatch_table(cls):
+        super()._load_dispatch_table()
+        temp = {
+            torch.ops.aten.relu: semi_sparse_pointwise_op,
+            torch.ops.aten.gelu: semi_sparse_pointwise_op,
+            torch.ops.aten.silu: semi_sparse_pointwise_op,
+            torch.ops.aten.mul: partial(
+                # `mul` BW in swiglu
+                semi_sparse_pointwise_op,
+                allow_sparsify_args_list=(0, 1),
+            ),
+            torch.ops.aten.add: semi_sparse_pointwise_op,
+            # Note: for these ops, we allow the gradient to come in as a `torch.Tensor`
+            # and we will run the sparsification right before calling the BW aten func
+            torch.ops.aten.gelu_backward: partial(
+                semi_sparse_pointwise_op, allow_sparsify_args_list=(0,)
+            ),
+            torch.ops.aten.silu_backward: partial(
+                semi_sparse_pointwise_op, allow_sparsify_args_list=(0, 1)
+            ),
+            torch.ops.aten.threshold_backward: partial(  # relu BW
+                semi_sparse_pointwise_op,
+                allow_sparsify_args_list=(0,),
+            ),
+        }
+        cls.SPARSE_DISPATCH.update(temp)
+
 
     def to_dense(self):
         assert self.meta is not None and self.packed is not None
@@ -453,7 +516,7 @@ class SparseSemiStructuredTensorCUSPARSELT(SparseSemiStructuredTensor):
     cuSPARSELt also supports transposition fusion, which is necessary for performant 2:4 sparse training, as well
     as specifying alg_id, a config that affects the performance of the matmul depending on matmul sizes.
     """
-
+    BACKEND = "cusparselt"
     _DTYPE_SHAPE_CONSTRAINTS = {
         torch.int8: _SEMI_STRUCTURED_SPARSE_CONFIG(32, 32, 16, 16),
         torch.float16: _SEMI_STRUCTURED_SPARSE_CONFIG(16, 16, 8, 8),
@@ -475,6 +538,7 @@ class SparseSemiStructuredTensorCUSPARSELT(SparseSemiStructuredTensor):
             alg_id_cusparselt=SparseSemiStructuredTensor._DEFAULT_ALG_ID,
             requires_grad=original_tensor.requires_grad,
         )
+
 
     def _mm(
         self,
