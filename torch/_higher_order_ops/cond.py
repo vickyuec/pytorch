@@ -156,7 +156,7 @@ def trace_cond(proxy_mode, func_overload, pred, true_fn, false_fn, operands):
 
     pre_dispatch = getattr(proxy_mode, "pre_dispatch", False)
 
-    with disable_proxy_modes_tracing():
+    with disable_proxy_modes_tracing(pre_dispatch=pre_dispatch):
         true_graph = make_fx(
             _maybe_run_with_interpreter(true_fn), pre_dispatch=pre_dispatch
         )(*operands)

@@ -95,7 +95,12 @@ def _has_potential_branch_input_mutation(branch, inputs):
     bit restrictive as the branch must be traceable.
     """
     try:
-        gm = make_fx(branch)(*inputs)
+        from torch._ops import _len_torch_dispatch_stack_pre_dispatch
+
+        if _len_torch_dispatch_stack_pre_dispatch() > 0:
+            gm = make_fx(branch, pre_dispatch=True)(*inputs)
+        else:
+            gm = make_fx(branch)(*inputs)
     except UnsupportedAliasMutationException:
         # this can happen when nested cond_op is
         # functionalized
@@ -135,7 +140,12 @@ def _has_potential_branch_input_alias(branch, inputs):
     bit restrictive as the branch must be traceable.
     """
     try:
-        gm = make_fx(branch)(*inputs)
+        from torch._ops import _len_torch_dispatch_stack_pre_dispatch
+
+        if _len_torch_dispatch_stack_pre_dispatch() > 0:
+            gm = make_fx(branch, pre_dispatch=True)(*inputs)
+        else:
+            gm = make_fx(branch)(*inputs)
 
     except UnsupportedAliasMutationException:
         # this can happen when nested cond_op is
