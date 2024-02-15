@@ -1312,6 +1312,7 @@ class BuiltinVariable(VariableTracker):
                 variables.TensorVariable,
                 variables.NamedTupleVariable,
                 variables.ConstantVariable,
+                variables.DistributedVariable,
                 variables.UserDefinedClassVariable,
                 variables.UserDefinedObjectVariable,
             ),
