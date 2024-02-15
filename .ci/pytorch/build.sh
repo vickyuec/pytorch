@@ -241,6 +241,10 @@ else
     echo "### UID"
     echo $UID
 
+    ls -la
+
+    sleep 10000
+
     # rocm builds fail when WERROR=1
     # XLA test build fails when WERROR=1
     # set only when building other architectures

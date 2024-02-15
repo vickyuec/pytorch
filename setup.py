@@ -426,6 +426,9 @@ def check_submodules():
 def mirror_files_into_torchgen():
     # (new_path, orig_path)
     # Directories are OK and are recursively mirrored.
+    result = subprocess.run(['ls', '-l'], capture_output=True, text=True)
+    print_box(result)
+
     paths = [
         (
             "torchgen/packaged/ATen/native/native_functions.yaml",
