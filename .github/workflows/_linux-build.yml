@@ -174,10 +174,10 @@ jobs:
           OUR_GITHUB_JOB_ID: ${{ steps.get-job-id.outputs.job-id }}
           HUGGING_FACE_HUB_TOKEN: ${{ secrets.HUGGING_FACE_HUB_TOKEN }}
         run: |
-          ls -la ../
+          pwd
+          ls -la
           whoami
           echo $UID
-          ls -la /var/lib
 
           # detached container should get cleaned up by teardown_ec2_linux
           container_name=$(docker run \
