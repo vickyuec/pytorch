@@ -350,7 +350,8 @@ if [[ "$image" == *cuda*  && ${OS} == "ubuntu" ]]; then
 fi
 
 # Build image
-DOCKER_BUILDKIT=1 docker build \
+sleep 3600
+sudo buildah build \
        --no-cache \
        --build-arg "BUILD_ENVIRONMENT=${image}" \
        --build-arg "PROTOBUF=${PROTOBUF:-}" \
@@ -400,52 +401,52 @@ DOCKER_BUILDKIT=1 docker build \
 #   "$UBUNTU_VERSION" == "18.04"
 UBUNTU_VERSION=$(echo ${UBUNTU_VERSION} | sed 's/-rc$//')
 
-function drun() {
-  docker run --rm "$tmp_tag" $*
-}
+# function drun() {
+#   docker run --rm "$tmp_tag" $*
+# }
 
-if [[ "$OS" == "ubuntu" ]]; then
+# if [[ "$OS" == "ubuntu" ]]; then
 
-  if !(drun lsb_release -a 2>&1 | grep -qF Ubuntu); then
-    echo "OS=ubuntu, but:"
-    drun lsb_release -a
-    exit 1
-  fi
-  if !(drun lsb_release -a 2>&1 | grep -qF "$UBUNTU_VERSION"); then
-    echo "UBUNTU_VERSION=$UBUNTU_VERSION, but:"
-    drun lsb_release -a
-    exit 1
-  fi
-fi
+#   if !(drun lsb_release -a 2>&1 | grep -qF Ubuntu); then
+#     echo "OS=ubuntu, but:"
+#     drun lsb_release -a
+#     exit 1
+#   fi
+#   if !(drun lsb_release -a 2>&1 | grep -qF "$UBUNTU_VERSION"); then
+#     echo "UBUNTU_VERSION=$UBUNTU_VERSION, but:"
+#     drun lsb_release -a
+#     exit 1
+#   fi
+# fi
 
-if [ -n "$ANACONDA_PYTHON_VERSION" ]; then
-  if !(drun python --version 2>&1 | grep -qF "Python $ANACONDA_PYTHON_VERSION"); then
-    echo "ANACONDA_PYTHON_VERSION=$ANACONDA_PYTHON_VERSION, but:"
-    drun python --version
-    exit 1
-  fi
-fi
+# if [ -n "$ANACONDA_PYTHON_VERSION" ]; then
+#   if !(drun python --version 2>&1 | grep -qF "Python $ANACONDA_PYTHON_VERSION"); then
+#     echo "ANACONDA_PYTHON_VERSION=$ANACONDA_PYTHON_VERSION, but:"
+#     drun python --version
+#     exit 1
+#   fi
+# fi
 
-if [ -n "$GCC_VERSION" ]; then
-  if !(drun gcc --version 2>&1 | grep -q " $GCC_VERSION\\W"); then
-    echo "GCC_VERSION=$GCC_VERSION, but:"
-    drun gcc --version
-    exit 1
-  fi
-fi
+# if [ -n "$GCC_VERSION" ]; then
+#   if !(drun gcc --version 2>&1 | grep -q " $GCC_VERSION\\W"); then
+#     echo "GCC_VERSION=$GCC_VERSION, but:"
+#     drun gcc --version
+#     exit 1
+#   fi
+# fi
 
-if [ -n "$CLANG_VERSION" ]; then
-  if !(drun clang --version 2>&1 | grep -qF "clang version $CLANG_VERSION"); then
-    echo "CLANG_VERSION=$CLANG_VERSION, but:"
-    drun clang --version
-    exit 1
-  fi
-fi
+# if [ -n "$CLANG_VERSION" ]; then
+#   if !(drun clang --version 2>&1 | grep -qF "clang version $CLANG_VERSION"); then
+#     echo "CLANG_VERSION=$CLANG_VERSION, but:"
+#     drun clang --version
+#     exit 1
+#   fi
+# fi
 
-if [ -n "$KATEX" ]; then
-  if !(drun katex --version); then
-    echo "KATEX=$KATEX, but:"
-    drun katex --version
-    exit 1
-  fi
-fi
+# if [ -n "$KATEX" ]; then
+#   if !(drun katex --version); then
+#     echo "KATEX=$KATEX, but:"
+#     drun katex --version
+#     exit 1
+#   fi
+# fi

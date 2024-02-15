@@ -84,6 +84,7 @@ jobs:
 
           sudo apt-get update
           sudo apt-get install -y git curl unzip build-essential dnsutils python3-pip zip
+          sudo apt-get install -y buildah
 
           python3 -m pip --version
           docker --version
@@ -105,6 +106,7 @@ jobs:
           whoami
           echo $UID
           ls -la ../
+          cat /etc/subuid /etc/subgid
 
       - name: Calculate docker image
         id: calculate-docker-image
