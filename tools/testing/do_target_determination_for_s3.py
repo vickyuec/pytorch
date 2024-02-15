@@ -60,15 +60,20 @@ def main() -> None:
     test_prioritizations = aggregated_heuristics.get_aggregated_priorities()
 
     prediction_confidences = get_prediction_confidences(selected_tests)
-
-    if os.getenv("CI", "0") == "1":
+    if os.getenv("CI") == "true":
+        print("Emitting metrics")
+        # Split into 3 due to size constraints
         emit_metric(
-            "td_results",
-            {
-                "prediction_confidences": prediction_confidences,
-                "final_test_prioritizations": test_prioritizations.to_json(),
-                "aggregated_heuristics": aggregated_heuristics.to_json(),
-            },
+            "td_results_prediction_confidences",
+            {"prediction_confidences": prediction_confidences},
+        )
+        emit_metric(
+            "td_results_final_test_prioritizations",
+            {"test_prioritizations": test_prioritizations.to_json()},
+        )
+        emit_metric(
+            "td_results_aggregated_heuristics",
+            {"aggregated_heuristics": aggregated_heuristics.to_json()},
         )
 
     with open(REPO_ROOT / "td_results.json", "w") as f:
