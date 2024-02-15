@@ -217,7 +217,6 @@ jobs:
           pwd
           ls -la build/
           
-          sleep 1000
           sudo zip -1 -r artifacts.zip dist/ build/custom_test_artifacts build/lib build/bin .additional_ci_files
 
       - name: Store PyTorch Build Artifacts on S3
@@ -228,6 +227,7 @@ jobs:
           retention-days: 14
           if-no-files-found: error
           path: artifacts.zip
+          s3-bucket: pytorch-ci-artifacts
 
       - name: Upload sccache stats
         if: steps.build.outcome != 'skipped'
@@ -238,6 +238,7 @@ jobs:
           retention-days: 365
           if-no-files-found: warn
           path: sccache-stats-*.json
+          s3-bucket: pytorch-ci-artifacts
 
       - name: Teardown Linux
         uses: pytorch/test-infra/.github/actions/teardown-linux@main
