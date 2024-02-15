@@ -5,12 +5,12 @@ import operator
 from collections import Counter, defaultdict
 from typing import Any, Dict, List, Optional, Set, Union
 
-from sympy import Expr
-
 import torch
 import torch._inductor as inductor
 import torch.utils._pytree as pytree
 from torch import fx
+
+from sympy import Expr
 from torch._decomp import register_decomposition
 
 from torch._prims_common import is_boolean_dtype, is_expandable_to, is_integer_dtype
@@ -42,8 +42,10 @@ from ..pattern_matcher import (
 )
 from ..utils import decode_device, is_pointwise_use
 from ..virtualized import V
+from .distributed import fuse_ddp_communication
 from .group_batch_fusion import group_batch_fusion_passes
 from .reinplace import reinplace_inplaceable_ops
+
 
 log = logging.getLogger(__name__)
 aten = torch.ops.aten
@@ -94,6 +96,13 @@ def post_grad_passes(gm: torch.fx.GraphModule, is_inference: bool):
             )
         if is_inference:
             inference_patterns.apply(gm.graph)  # type: ignore[arg-type]
+
+    if config.fuse_ddp_communication:
+        fuse_ddp_communication(
+            gm.graph,
+            config.fuse_ddp_communication_passes,
+            config.ddp_fusion_bucket_size,
+        )
 
     if config.post_grad_custom_post_pass is not None:
         config.post_grad_custom_post_pass(gm.graph)
