@@ -427,7 +427,7 @@ def mirror_files_into_torchgen():
     # (new_path, orig_path)
     # Directories are OK and are recursively mirrored.
     result = subprocess.run(['ls', '-l'], capture_output=True, text=True)
-    print_box(result)
+    print(result)
 
     paths = [
         (
@@ -441,7 +441,7 @@ def mirror_files_into_torchgen():
     ]
     for new_path, orig_path in paths:
         result = subprocess.run(['ls', '-l', os.path.dirname(new_path)], capture_output=True, text=True)
-        print_box(result.stdout)
+        print(result.stdout)
 
         # Create the dirs involved in new_path if they don't exist
         if not os.path.exists(new_path):
