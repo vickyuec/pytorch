@@ -343,6 +343,17 @@ class TestDTensorCompile(torch._dynamo.test_case.TestCase):
         res = opt_kwargs_fn(x)
         self.assertEqual(res, ref)
 
+    def test_inductor_wait_followed_by_view(self):
+        mesh = DeviceMesh(self.device_type, torch.arange(self.world_size))
+
+        def fn(x_dt):
+            out = x_dt.redistribute(mesh, [Replicate()])
+            return out.view(-1)
+
+        opt_fn = torch.compile(fn, backend="inductor", fullgraph=True)
+        res = opt_fn(x_dt)
+        self.assertEqual(ref, res)
+
     def test_dtensor_dynamo_device_mesh_attrs(self):
         mesh = DeviceMesh(self.device_type, torch.arange(self.world_size))
 
@@ -451,8 +462,8 @@ class TestDTensorCompile(torch._dynamo.test_case.TestCase):
         FileCheck() \
             .check("buf1_work = dist.all_gather_into_tensor(buf1[0]") \
             .check("buf2 = buf1[0]") \
-            .check("buf2 = _wait_tensor(buf2)") \
-            .check("extern_kernels.mm(buf2,") \
+            .check("buf3 = _wait_tensor(buf2)") \
+            .check("extern_kernels.mm(buf3,") \
             .run(code)
 
 
