@@ -349,13 +349,17 @@ class _OpCounterCSE:
             val = getattr(self.parent_handler, name)(*args, **kwargs)
             if name == "indirect_indexing":
                 return val
-            if val not in self.var_names:
-                varname = f"tmp{self.op_count}"
-                self.op_count += 1
-                self.var_names[val] = varname
-                return varname
-            else:
-                return self.var_names[val]
+
+            def count(val):
+                if val not in self.var_names:
+                    varname = f"tmp{self.op_count}"
+                    self.op_count += 1
+                    self.var_names[val] = varname
+                    return varname
+                else:
+                    return self.var_names[val]
+
+            return pytree.tree_map(count, val)
 
         return inner
 
@@ -6933,6 +6937,11 @@ class LoopBodyBlock:
                 return tracer.create_proxy(
                     "call_module", name, (dtype_proxy, value_proxy, init_proxy), {}
                 )
+
+            def frexp(self, value_proxy):
+                result = self._inner.frexp(value_proxy)
+                # Proxies are iterable, but some methods expect tuples/lists
+                return (result[0], result[1])
 
             @staticmethod
             def indirect_indexing(index_proxy, size, check=True):

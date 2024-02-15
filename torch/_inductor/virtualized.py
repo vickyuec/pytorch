@@ -82,6 +82,8 @@ from torch._inductor.utils import IndentedBuffer
 
 from torch.fx.graph import inplace_methods, magic_methods
 
+from torch.utils import _pytree as pytree
+
 from .utils import reduction_num_outputs, sympy_index_symbol, sympy_str
 
 if TYPE_CHECKING:
@@ -199,6 +201,10 @@ class MockHandler:
     @staticmethod
     def masked(mask, body, other) -> str:
         return f"ops.masked({mask}, {body()}, {other})"
+
+    @staticmethod
+    def frexp(x):
+        return (f"ops.frexp({x})[0]", f"ops.frexp({x})[1]")
 
     @staticmethod
     def indirect_indexing(index_var, size, check=True) -> sympy.Symbol:
@@ -497,6 +503,9 @@ class OpsHandler(Protocol[T]):
     def erfinv(self, x0: T) -> T:
         ...
 
+    def frexp(self, x0: T):
+        ...
+
     def hypot(self, x0: T, x1: T) -> T:
         ...
 
@@ -713,13 +722,18 @@ class KernelFormatterHandler:
 
     def __getattr__(self, name) -> Callable[..., Any]:
         def inner(*args, **kwargs):
-            line = getattr(self.parent_handler, name)(*args, **kwargs)
+            fn = getattr(self.parent_handler, name)
+            line = fn(*args, **kwargs)
             if name == "indirect_indexing":
                 return line
-            # replace line with a new variable name
-            varname = f"tmp{next(self.var_counter)}"
-            self.output.writeline(f"{varname} = {line}")
-            return varname
+
+            def write(line):
+                # replace line with a new variable name
+                varname = f"tmp{next(self.var_counter)}"
+                self.output.writeline(f"{varname} = {line}")
+                return varname
+
+            return pytree.tree_map(write, line)
 
         return inner
 
