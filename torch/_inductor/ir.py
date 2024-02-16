@@ -9,7 +9,7 @@ import textwrap
 import traceback
 from contextlib import nullcontext
 from enum import Enum
-from functools import partial
+from functools import partial, reduce
 from typing import (
     Any,
     Callable,
@@ -3191,16 +3191,7 @@ class ComputedBuffer(Buffer):
             else:
                 self.freeze_layout()
 
-    def simplify_and_reorder(self):
-        """
-        This is a main place where we do loop transformations in a
-        backend-agnostic way.
-
-        Here we:
-            1) Remove any 1 dimensions
-            2) Fuse contiguous dimensions together
-            3) Reorder dimensions based on stride orders
-        """
+    def get_default_sizes_body(self):
         args, var_ranges = dependencies.index_vars_squeeze(
             self.data.get_pointwise_size(), self.data.get_reduction_size(), prefix="q"
         )
@@ -3210,17 +3201,6 @@ class ComputedBuffer(Buffer):
                 (args if self.get_reduction_type() else args[:1]),
                 var_ranges,
             )
-        index_formulas = [*body.indexing_exprs.values()]
-        reads_bufs = [
-            V.graph.name_to_buffer[reads_name]
-            if reads_name in V.graph.name_to_buffer.keys()
-            else None
-            for reads_name in body.reads_name2expr.keys()
-        ]
-        memory_addrs = [
-            *body.reads_name2expr.values(),
-            *body.writes_name2expr.values(),
-        ]
         index_vars = []
         reduce_vars: List[Any] = []
         index_size = []
@@ -3234,6 +3214,56 @@ class ComputedBuffer(Buffer):
                 assert v in args[1]
                 reduce_vars.append(v)
                 reduce_size.append(s)
+        return (index_size, reduce_size), body, (index_vars, reduce_vars)
+
+    def simplify_and_reorder(self, extra_indexing_constraints: Tuple[Dict, List] = None):
+        """
+        This is a main place where we do loop transformations in a
+        backend-agnostic way.
+
+        Here we:
+            1) Remove any 1 dimensions
+            2) Fuse contiguous dimensions together
+            3) Reorder dimensions based on stride orders
+        """
+        (index_size, reduce_size), body, (index_vars, reduce_vars) = self.get_default_sizes_body()
+
+        index_formulas = [*body.indexing_exprs.values()]
+        if extra_indexing_constraints is not None:
+            # extra_indexing_contraints can have z symbols but we need q symbols.
+            # We need to replace symbols
+            assert isinstance(extra_indexing_constraints, tuple) and len(extra_indexing_constraints) == 2
+            extra_indexing_ranges, extra_indexing_expr = extra_indexing_constraints
+            assert isinstance(extra_indexing_ranges, dict)
+            assert isinstance(extra_indexing_expr, list)
+            assert all([isinstance(f, Expr) for f in extra_indexing_expr])
+
+            expected_var_ranges = body.var_ranges
+            assert expected_var_ranges == extra_indexing_ranges, (expected_var_ranges, extra_indexing_ranges)
+
+            extra_indexing_symbols = reduce(
+                lambda a, b: a | b,
+                [f.free_symbols for f in extra_indexing_expr]
+            )
+
+            indexing_symbols = reduce(
+                lambda a, b: a | b,
+                [f.free_symbols for f in index_formulas]
+            )
+
+            assert len(indexing_symbols - extra_indexing_symbols) == 0, (extra_indexing_symbols, indexing_symbols)
+            index_formulas += extra_indexing_expr
+
+        reads_bufs = [
+            V.graph.name_to_buffer[reads_name]
+            if reads_name in V.graph.name_to_buffer.keys()
+            else None
+            for reads_name in body.reads_name2expr.keys()
+        ]
+        memory_addrs = [
+            *body.reads_name2expr.values(),
+            *body.writes_name2expr.values(),
+        ]
 
         # the reordering_reindex in reads' simplify_reorder_and_tile
         reordering_reindex = [same_reorder(range(len(index_vars)))] * len(memory_addrs)

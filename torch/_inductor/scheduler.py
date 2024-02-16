@@ -109,6 +109,43 @@ def fuse(node1: "BaseSchedulerNode", node2: "BaseSchedulerNode"):
     if node1.is_foreach() or node2.is_foreach():
         return ForeachKernelSchedulerNode.fuse(node1, node2)
     else:
+        _, (vars1, reduce1) = node1.group
+        _, (vars2, reduce2) = node2.group
+        if vars1 != vars2:
+            # Here we start with strict conditions which may be relaxed later
+            c1 = reduce1 == () and reduce2 == ()
+            c2 = math.prod(vars1) == math.prod(vars2)
+            c3 = len(vars1) == 1 or len(vars2) == 1
+            if c1 and c2 and c3:
+
+                def get_indexing_ranges_exprs(node):
+                    if isinstance(node, SchedulerNode):
+                        comp_buffer = node.node
+                        _, body, _ = comp_buffer.get_default_sizes_body()
+                        return body.var_ranges, [*body.indexing_exprs.values()]
+                    elif isinstance(node, FusedSchedulerNode):
+                        assert len(node.snodes) > 0
+                        # use the last scheduler node from the list as it has the most
+                        # relevant indexing expressions
+                        return get_indexing_ranges_exprs(node.snodes[-1])
+                    else:
+                        return None
+
+                node_to_recomp = node1 if len(vars1) < len(vars2) else node2
+                ref_node = node2 if len(vars1) < len(vars2) else node1
+                extra_indexing_constraints = get_indexing_ranges_exprs(ref_node)
+                if extra_indexing_constraints is not None and isinstance(node_to_recomp, SchedulerNode):
+                    node_to_recomp.recompute_size_and_body(extra_indexing_constraints=extra_indexing_constraints)
+
+                    if len(vars1) < len(vars2):
+                        node1 = node_to_recomp
+                    else:
+                        node2 = node_to_recomp
+
+                    _, (vars1, reduce1) = node1.group
+                    _, (vars2, reduce2) = node2.group
+                    assert vars1 == vars2, (vars1, vars2)
+
         return FusedSchedulerNode.fuse(node1, node2)
 
 
@@ -689,24 +726,27 @@ class SchedulerNode(BaseSchedulerNode):
         self,
         scheduler: "Scheduler",
         node: Union[ir.ComputedBuffer, ir.TemplateBuffer],
-        group_fn,
     ):
         super().__init__(scheduler, node)
-        (
-            self._sizes,
-            self._body,
-        ) = node.simplify_and_reorder()
+        self._compute_attrs()
 
-        self.group = (node.get_device(), group_fn(self._sizes))
+    def _compute_attrs(self, extra_indexing_constraints: Optional[Tuple[Dict, List]] = None):
+        self._sizes, self._body = self.node.simplify_and_reorder(extra_indexing_constraints=extra_indexing_constraints)
 
-        if isinstance(node, ir.TemplateBuffer):
-            self.set_read_writes(node.normalized_read_writes())
+        group_fn = self.scheduler.get_backend(self.node.get_device()).group_fn
+        self.group = (self.node.get_device(), group_fn(self._sizes))
+
+        if isinstance(self.node, ir.TemplateBuffer):
+            self.set_read_writes(self.node.normalized_read_writes())
         else:
             self.set_read_writes(
                 dependencies.extract_read_writes(
                     self._body, *self._sizes, normalize=True
                 )
             )
+
+    def recompute_size_and_body(self, extra_indexing_constraints: Tuple[Dict, List]):
+        self._compute_attrs(extra_indexing_constraints=extra_indexing_constraints)
 
     def debug_str_extra(self) -> str:
         name = self.get_name()
@@ -1249,7 +1289,7 @@ class Scheduler:
         }
         self.name_to_fused_node: Dict[
             str, BaseSchedulerNode
-        ] = dict()  # set in fuse_nods()
+        ] = dict()  # set in fuse_nodes()
 
         # mutation_real_name: Maps back to the original name for codegen
         # Example:
@@ -1328,8 +1368,7 @@ class Scheduler:
         if node.is_no_op():
             return NopKernelSchedulerNode(self, node)
         elif isinstance(node, (ir.ComputedBuffer, ir.TemplateBuffer)):
-            group_fn = self.get_backend(node.get_device()).group_fn
-            return SchedulerNode(self, node, group_fn)
+            return SchedulerNode(self, node)
         elif isinstance(node, ir.ExternKernel):
             return ExternKernelSchedulerNode(self, node)
         else:

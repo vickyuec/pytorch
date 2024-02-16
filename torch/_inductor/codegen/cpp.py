@@ -3379,6 +3379,12 @@ class CppScheduling(BaseScheduling):
             return True
         if reduce1 == () and vars1 == vars2 + reduce2:
             return True
+        # Here we start with strict conditions which may be relaxed later
+        c1 = reduce1 == () and reduce2 == ()
+        c2 = math.prod(vars1) == math.prod(vars2)
+        c3 = len(vars1) == 1 or len(vars2) == 1
+        if c1 and c2 and c3:
+            return True
         # TODO(jansel): allow fusion pointwise (vars1, ()) suffix?
         return False
 
