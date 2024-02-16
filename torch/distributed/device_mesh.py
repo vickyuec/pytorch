@@ -199,7 +199,7 @@ else:
         ) -> None:
             self.device_type = device_type
             self.mesh = (
-                mesh.detach()
+                mesh.detach().cpu()
                 if isinstance(mesh, torch.Tensor)
                 else torch.tensor(mesh, dtype=torch.int)
             )
