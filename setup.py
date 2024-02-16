@@ -426,9 +426,6 @@ def check_submodules():
 def mirror_files_into_torchgen():
     # (new_path, orig_path)
     # Directories are OK and are recursively mirrored.
-    result = subprocess.run(['ls', '-l'], capture_output=True, text=True)
-    print(result)
-
     paths = [
         (
             "torchgen/packaged/ATen/native/native_functions.yaml",
@@ -440,9 +437,6 @@ def mirror_files_into_torchgen():
         ("torchgen/packaged/autograd/templates", "tools/autograd/templates"),
     ]
     for new_path, orig_path in paths:
-        result = subprocess.run(['ls', '-l', os.path.dirname(new_path)], capture_output=True, text=True)
-        print(result.stdout)
-
         # Create the dirs involved in new_path if they don't exist
         if not os.path.exists(new_path):
             os.makedirs(os.path.dirname(new_path), exist_ok=True)

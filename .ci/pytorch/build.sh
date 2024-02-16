@@ -228,7 +228,6 @@ if [[ "$BUILD_ENVIRONMENT" == *-bazel-* ]]; then
     tools/bazel build --config=no-tty "${BAZEL_MEM_LIMIT}" "${BAZEL_CPU_LIMIT}" //...
   fi
 else
-#  echo "### To resolve <fatal: detected dubious ownership in repository at '/var/lib/jenkins/workspace'>"
   git config --global --add safe.directory /var/lib/jenkins/workspace
 
   # check that setup.py would fail with bad arguments
@@ -238,16 +237,7 @@ else
   ( ! get_exit_code python setup.py clean bad_argument )
 
   if [[ "$BUILD_ENVIRONMENT" != *libtorch* ]]; then
-    pwd
-
-    echo "### UID"
-    echo $UID
-
-    ls -la
-    cd ../
     sudo chown -R jenkins workspace
-    cd -
-    ls -la
 
     # rocm builds fail when WERROR=1
     # XLA test build fails when WERROR=1
@@ -264,14 +254,7 @@ else
     # TODO: I'm not sure why, but somehow we lose verbose commands
     set -x
 
-    git status --porcelain
-
-    echo "### Check aws folder"
-    ls -la aws/
-
-    echo "### Check parent folder"
-    ls -la ../
-
+    # remove extra folder
     if [ -d "aws/" ]; then rm -rf aws/; fi
 
     assert_git_not_dirty

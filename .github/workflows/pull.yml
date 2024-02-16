@@ -405,10 +405,9 @@ jobs:
     with:
       build-environment: linux-jammy-py3-clang12-executorch
       docker-image-name: pytorch-linux-jammy-py3-clang12-executorch
-      runner: arc-lf-linux.2xlarge.arc.canary
       test-matrix: |
         { include: [
-          { config: "executorch", shard: 1, num_shards: 1, runner: "arc-lf-linux.2xlarge.arc.canary" },
+          { config: "executorch", shard: 1, num_shards: 1, runner: "linux.2xlarge" },
         ]}
 
   linux-jammy-py3-clang12-executorch-test:
