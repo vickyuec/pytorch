@@ -12,6 +12,7 @@ from torchgen.api.types import (
     ConstRefCType,
     CType,
     dimnameListT,
+    generatorT,
     intArrayRefT,
     iTensorListRefT,
     ListCType,
@@ -144,6 +145,9 @@ def argumenttype_type(
         remove_non_owning_ref_types=remove_non_owning_ref_types,
     )
     if r is not None:
+        if isinstance(t, OptionalType) and not mutable:
+            if str(t.elem) == "Generator":
+                return NamedCType(binds, ConstRefCType(r.type))
         return r
 
     if isinstance(t, BaseType):

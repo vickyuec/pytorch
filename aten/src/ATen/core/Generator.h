@@ -150,7 +150,7 @@ Generator make_generator(Args&&... args) {
  * the backend generator type (CPU/CUDAGeneratorImpl etc.)
  */
 template <typename T>
-static inline T * check_generator(c10::optional<Generator> gen) {
+static inline T * check_generator(const c10::optional<Generator>& gen) {
   TORCH_CHECK(gen.has_value(), "Expected Generator but received nullopt");
   TORCH_CHECK(gen->defined(), "Generator with undefined implementation is not allowed");
   TORCH_CHECK(T::device_type() == gen->device().type(), "Expected a '", T::device_type(), "' device type for generator but found '", gen->device().type(), "'");

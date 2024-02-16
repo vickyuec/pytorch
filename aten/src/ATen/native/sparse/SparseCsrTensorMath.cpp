@@ -327,7 +327,7 @@ Tensor& normal_sparse_csr_(
     Tensor& self,
     double mean,
     double std,
-    c10::optional<Generator> gen) {
+    const c10::optional<Generator>& gen) {
   return unary_op_inplace(self, &Tensor::normal_, mean, std, gen);
 }
 
