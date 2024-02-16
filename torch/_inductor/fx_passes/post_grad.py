@@ -57,7 +57,7 @@ pass_patterns = [
 ]
 # patterns applied only in inference
 inference_patterns = PatternMatcherPass()
-
+decompose_mm_pass = PatternMatcherPass()
 
 def post_grad_passes(gm: torch.fx.GraphModule, is_inference: bool):
     """
@@ -94,6 +94,7 @@ def post_grad_passes(gm: torch.fx.GraphModule, is_inference: bool):
             )
         if is_inference:
             inference_patterns.apply(gm.graph)  # type: ignore[arg-type]
+        decompose_mm_pass.apply(gm.graph)  # type: ignore[arg-type]
 
     if config.post_grad_custom_post_pass is not None:
         config.post_grad_custom_post_pass(gm.graph)
@@ -119,6 +120,7 @@ def post_grad_passes(gm: torch.fx.GraphModule, is_inference: bool):
 def lazy_init():
     if torch._C._has_mkldnn:
         from .mkldnn_fusion import _mkldnn_fusion_init
+        from . import decompose_mem_bound_mm # noqa: F401
 
         _mkldnn_fusion_init()
 
